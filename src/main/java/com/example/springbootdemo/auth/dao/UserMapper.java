@@ -1,0 +1,88 @@
+package com.example.springbootdemo.auth.dao;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
+
+import java.util.List;
+
+@Mapper
+public interface UserMapper {
+
+    @Select("""
+            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            FROM user_account
+            WHERE phone = #{phone}
+              AND role = #{role}
+            LIMIT 1
+            """)
+    UserEntity findByPhoneAndRole(@Param("phone") String phone, @Param("role") Integer role);
+
+    @Select("""
+            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            FROM user_account
+            WHERE phone = #{phone}
+            LIMIT 1
+            """)
+    UserEntity findByPhone(@Param("phone") String phone);
+
+    @Insert("""
+            INSERT INTO user_account(name, phone, password, role)
+            VALUES(#{name}, #{phone}, #{password}, #{role})
+            """)
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insert(UserEntity user);
+
+    @Select("""
+            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            FROM user_account
+            WHERE id = #{merchantId}
+              AND role = 3
+            LIMIT 1
+            """)
+    UserEntity findMerchantById(@Param("merchantId") Long merchantId);
+
+    @Select("""
+            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            FROM user_account
+            WHERE id = #{teacherId}
+              AND role = 2
+            LIMIT 1
+            """)
+    UserEntity findTeacherById(@Param("teacherId") Long teacherId);
+
+    @Select("""
+            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            FROM user_account
+            WHERE id = #{developerId}
+              AND role = 4
+            LIMIT 1
+            """)
+    UserEntity findDeveloperById(@Param("developerId") Long developerId);
+
+    @Select("""
+            <script>
+            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            FROM user_account
+            WHERE role = 3
+              <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+              </if>
+            ORDER BY id DESC
+            LIMIT 100
+            </script>
+            """)
+    List<UserEntity> searchMerchants(@Param("keyword") String keyword);
+
+    @Update("""
+            UPDATE user_account
+            SET remaining_use_count = remaining_use_count - 1
+            WHERE id = #{merchantId}
+              AND role = 3
+              AND remaining_use_count > 0
+            """)
+    int decrementMerchantRemainingUseCount(@Param("merchantId") Long merchantId);
+}
