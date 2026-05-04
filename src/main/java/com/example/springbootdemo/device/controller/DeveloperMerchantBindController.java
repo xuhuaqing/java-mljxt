@@ -42,6 +42,16 @@ public class DeveloperMerchantBindController {
         return ApiResponse.success(result);
     }
 
+    @PostMapping("/unbind")
+    public ApiResponse<BindDeveloperMerchantVO> unbind(@Valid @RequestBody BindDeveloperMerchantRequest request) {
+        log.info("调用接口 /api/developer-merchant/unbind, developerId={}, merchantId={}",
+                request.getDeveloperId(), request.getMerchantId());
+        BindDeveloperMerchantVO result = developerMerchantBindService.unbind(request);
+        log.info("解绑结果 /api/developer-merchant/unbind, developerId={}, merchantId={}, notBound={}",
+                result.developerId(), result.merchantId(), result.alreadyBound());
+        return ApiResponse.success(result);
+    }
+
     @GetMapping("/bound-list")
     public ApiResponse<List<DeveloperBoundDeviceVO>> boundList(@RequestParam("developerId") Long developerId) {
         log.info("调用接口 /api/developer-merchant/bound-list, developerId={}", developerId);

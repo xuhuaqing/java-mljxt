@@ -6,6 +6,7 @@ public class UserEntity {
     private String phone;
     private String password;
     private Integer role;
+    private Integer status;
     private Integer remainingUseCount;
 
     public Long getId() {
@@ -46,6 +47,14 @@ public class UserEntity {
 
     public void setRole(Integer role) {
         this.role = role;
+    }
+
+    public Integer getStatus() {
+        return status;
+    }
+
+    public void setStatus(Integer status) {
+        this.status = status;
     }
 
     public Integer getRemainingUseCount() {

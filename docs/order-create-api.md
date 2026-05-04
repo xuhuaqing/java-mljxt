@@ -1,3 +1,97 @@
+# 下单记录接口文档
+
+## 基本信息
+
+- 接口名称：创建下单记录
+- 请求方式：`POST`
+- 请求路径：`/api/order/create`
+- 完整示例：`http://localhost:8877/api/order/create`
+
+## 业务说明
+
+该接口只负责创建“下单记录”（写入 `order_record`），不代表设备已实际执行。  
+设备实际执行/消耗记录请使用“使用记录接口”（来源 `usage_record`）。
+
+## 请求体（JSON）
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| phone | string | 是 | 用户手机号，11位数字 |
+| gender | number | 是 | 性别：`0`男，`1`女 |
+| age | number | 是 | 年龄：`1-120` |
+| height | number | 是 | 身高（cm）：`50-250` |
+| weight | number | 是 | 体重（kg）：`20-300` |
+| sportPerformance | number | 是 | 运动表现：`0`经常、`1`偶尔、`2`从未 |
+| projectName | string | 是 | 项目名称 |
+| projectDuration | number | 是 | 项目时长（分钟）：`1-255` |
+| merchantId | number | 是 | 商家ID |
+| deviceId | number | 否 | 设备ID |
+| usageCount | number | 是 | 使用次数：`1-127` |
+
+请求示例：
+
+```json
+{
+  "phone": "17612718888",
+  "gender": 1,
+  "age": 28,
+  "height": 165,
+  "weight": 52,
+  "sportPerformance": 1,
+  "projectName": "腰骶温养呵护",
+  "projectDuration": 30,
+  "merchantId": 3,
+  "deviceId": 2,
+  "usageCount": 10
+}
+```
+
+## 返回结构
+
+统一返回体：
+
+```json
+{
+  "code": "0",
+  "msg": "success",
+  "data": {}
+}
+```
+
+`data` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| orderId | number | 下单记录ID（`order_record.id`） |
+| userId | number | 用户ID |
+| phone | string | 用户手机号 |
+| merchantId | number | 商家ID |
+| projectName | string | 项目名称 |
+| projectDuration | number | 项目时长 |
+| usageCount | number | 使用次数 |
+| newUserCreated | boolean | 是否自动创建了用户 |
+| initialPassword | string/null | 新建用户初始密码（手机号后4位） |
+
+成功响应示例：
+
+```json
+{
+  "code": "0",
+  "msg": "success",
+  "data": {
+    "orderId": 201,
+    "userId": 16,
+    "phone": "17612718888",
+    "merchantId": 3,
+    "projectName": "腰骶温养呵护",
+    "projectDuration": 30,
+    "usageCount": 10,
+    "newUserCreated": false,
+    "initialPassword": null
+  }
+}
+```
+
 # 下单接口文档
 
 ## 基本信息

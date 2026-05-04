@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Delete;
 
 import java.util.List;
 
@@ -23,6 +24,13 @@ public interface DeveloperMerchantBindMapper {
             VALUES(#{developerId}, #{merchantId})
             """)
     int insert(@Param("developerId") Long developerId, @Param("merchantId") Long merchantId);
+
+    @Delete("""
+            DELETE FROM developer_merchant_bind
+            WHERE developer_id = #{developerId}
+              AND merchant_id = #{merchantId}
+            """)
+    int deleteByDeveloperAndMerchant(@Param("developerId") Long developerId, @Param("merchantId") Long merchantId);
 
     @Select("""
             SELECT
@@ -44,7 +52,7 @@ public interface DeveloperMerchantBindMapper {
     @Select("""
             SELECT COALESCE(SUM(o.usage_count), 0)
             FROM developer_merchant_bind dmb
-            LEFT JOIN order_record o ON o.merchant_id = dmb.merchant_id
+            LEFT JOIN usage_record o ON o.merchant_id = dmb.merchant_id
             WHERE dmb.developer_id = #{developerId}
             """)
     long sumUsageCountByDeveloperId(@Param("developerId") Long developerId);

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public record OrderUsageRecordVO(
         Long orderId,
         Long userId,
+        String userPhone,
         Long merchantId,
         String deviceName,
         String projectName,

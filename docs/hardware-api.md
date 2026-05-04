@@ -122,11 +122,11 @@
 - 作用：按协议组帧后直接发布到 MQTT
 - 入参与 `/frame` 一样
 
-## 6) 按项目名称发送到设备（前端推荐）
+## 6) 按项目名称发送到设备
 
 - 方法：`POST`
 - 路径：`/api/hardware/send-by-project`
-- 作用：前端点击项目名时调用，后端自动把项目名解析成编码并发送 MQTT
+- 作用：按项目名发送，适合“未下单直接使用”场景
 
 请求字段：
 
@@ -154,6 +154,42 @@
   "usageCount": 10
 }
 ```
+
+## 7) 按订单ID发送到设备（当前推荐）
+
+- 方法：`POST`
+- 路径：`/api/hardware/send-by-order`
+- 作用：只传 `orderId` 即可发送，自动读取订单参数并下发到设备
+
+请求字段：
+
+- 必填：
+  - `orderId`：下单记录ID（`order_record.id`）
+- 可选：
+  - `machineNo`：设备编号（`0-9999`），不传则走订单里的 `deviceId` 对应设备
+
+最小请求示例：
+
+```json
+{
+  "orderId": 201
+}
+```
+
+覆盖设备号示例：
+
+```json
+{
+  "orderId": 201,
+  "machineNo": 1
+}
+```
+
+说明：
+
+- 发送成功后写入 `usage_record`
+- 免费期外会校验并扣减商家剩余次数
+- 若订单无设备且未传 `machineNo`，会返回错误
 
 成功响应示例：
 
@@ -196,6 +232,18 @@ export async function sendByProject(projectName: string, customerId: string) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ projectName, customerId })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function sendByOrder(orderId: number, machineNo?: number) {
+  const body: Record<string, number> = { orderId };
+  if (machineNo != null) body.machineNo = machineNo;
+  const res = await fetch(`${API_BASE}/api/hardware/send-by-order`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();

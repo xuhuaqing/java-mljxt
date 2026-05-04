@@ -13,7 +13,7 @@ import java.util.List;
 public interface UserMapper {
 
     @Select("""
-            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            SELECT id, name, phone, password, role, status, remaining_use_count AS remainingUseCount
             FROM user_account
             WHERE phone = #{phone}
               AND role = #{role}
@@ -22,22 +22,30 @@ public interface UserMapper {
     UserEntity findByPhoneAndRole(@Param("phone") String phone, @Param("role") Integer role);
 
     @Select("""
-            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            SELECT id, name, phone, password, role, status, remaining_use_count AS remainingUseCount
             FROM user_account
             WHERE phone = #{phone}
             LIMIT 1
             """)
     UserEntity findByPhone(@Param("phone") String phone);
 
+    @Select("""
+            SELECT id, name, phone, password, role, status, remaining_use_count AS remainingUseCount
+            FROM user_account
+            WHERE id = #{id}
+            LIMIT 1
+            """)
+    UserEntity findById(@Param("id") Long id);
+
     @Insert("""
-            INSERT INTO user_account(name, phone, password, role)
-            VALUES(#{name}, #{phone}, #{password}, #{role})
+            INSERT INTO user_account(name, phone, password, role, status)
+            VALUES(#{name}, #{phone}, #{password}, #{role}, #{status})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(UserEntity user);
 
     @Select("""
-            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            SELECT id, name, phone, password, role, status, remaining_use_count AS remainingUseCount
             FROM user_account
             WHERE id = #{merchantId}
               AND role = 3
@@ -46,7 +54,7 @@ public interface UserMapper {
     UserEntity findMerchantById(@Param("merchantId") Long merchantId);
 
     @Select("""
-            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            SELECT id, name, phone, password, role, status, remaining_use_count AS remainingUseCount
             FROM user_account
             WHERE id = #{teacherId}
               AND role = 2
@@ -55,7 +63,7 @@ public interface UserMapper {
     UserEntity findTeacherById(@Param("teacherId") Long teacherId);
 
     @Select("""
-            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            SELECT id, name, phone, password, role, status, remaining_use_count AS remainingUseCount
             FROM user_account
             WHERE id = #{developerId}
               AND role = 4
@@ -65,7 +73,7 @@ public interface UserMapper {
 
     @Select("""
             <script>
-            SELECT id, name, phone, password, role, remaining_use_count AS remainingUseCount
+            SELECT id, name, phone, password, role, status, remaining_use_count AS remainingUseCount
             FROM user_account
             WHERE role = 3
               <if test="keyword != null and keyword != ''">
@@ -85,4 +93,67 @@ public interface UserMapper {
               AND remaining_use_count > 0
             """)
     int decrementMerchantRemainingUseCount(@Param("merchantId") Long merchantId);
+
+    @Update("""
+            UPDATE user_account
+            SET name = #{name},
+                phone = #{phone},
+                password = #{password},
+                role = #{role},
+                status = #{status},
+                remaining_use_count = #{remainingUseCount}
+            WHERE id = #{id}
+            """)
+    int updateById(UserEntity user);
+
+    @Update("""
+            UPDATE user_account
+            SET status = 0
+            WHERE id = #{id}
+            """)
+    int disableById(@Param("id") Long id);
+
+    @Update("""
+            UPDATE user_account
+            SET status = 1
+            WHERE id = #{id}
+            """)
+    int enableById(@Param("id") Long id);
+
+    @Select("""
+            <script>
+            SELECT id, name, phone, password, role, status, remaining_use_count AS remainingUseCount
+            FROM user_account
+            <where>
+              <if test="role != null">
+                role = #{role}
+              </if>
+              <if test="keyword != null and keyword != ''">
+                AND (phone LIKE CONCAT('%', #{keyword}, '%') OR name LIKE CONCAT('%', #{keyword}, '%'))
+              </if>
+            </where>
+            ORDER BY id DESC
+            LIMIT #{offset}, #{pageSize}
+            </script>
+            """)
+    List<UserEntity> listByRole(@Param("role") Integer role,
+                                @Param("keyword") String keyword,
+                                @Param("offset") int offset,
+                                @Param("pageSize") int pageSize);
+
+    @Select("""
+            <script>
+            SELECT COUNT(1)
+            FROM user_account
+            <where>
+              <if test="role != null">
+                role = #{role}
+              </if>
+              <if test="keyword != null and keyword != ''">
+                AND (phone LIKE CONCAT('%', #{keyword}, '%') OR name LIKE CONCAT('%', #{keyword}, '%'))
+              </if>
+            </where>
+            </script>
+            """)
+    long countByRole(@Param("role") Integer role, @Param("keyword") String keyword);
 }

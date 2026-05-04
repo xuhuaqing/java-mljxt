@@ -13,6 +13,8 @@ public interface DeveloperMerchantBindService {
 
     BindDeveloperMerchantVO bind(BindDeveloperMerchantRequest request);
 
+    BindDeveloperMerchantVO unbind(BindDeveloperMerchantRequest request);
+
     List<DeveloperBoundDeviceVO> listBoundMerchants(Long developerId);
 
     DeveloperWithdrawVO withdraw(DeveloperWithdrawRequest request);

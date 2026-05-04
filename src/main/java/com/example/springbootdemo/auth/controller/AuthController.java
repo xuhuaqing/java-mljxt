@@ -26,7 +26,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ApiResponse<LoginUserVO> login(@Valid @RequestBody LoginRequest request) {
-        log.info("调用接口 /api/auth/login, phone={}, role={}", request.getPhone(), request.getRole());
+        log.info("调用接口 /api/auth/login, account={}, role={}", request.getAccount(), request.getRole());
         LoginUserVO user = authService.login(request);
         log.info("登录成功 /api/auth/login, userId={}, role={}", user.id(), user.role());
         return ApiResponse.success(user);

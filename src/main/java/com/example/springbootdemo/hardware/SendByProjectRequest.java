@@ -66,10 +66,10 @@ public class SendByProjectRequest {
     private Integer sportPerformance;
 
     /**
-     * 客户使用次数（单位：次），1字节范围 0~255。
+     * 客户使用次数（单位：次），当前与数据库字段范围对齐为 0~127。
      */
     @Min(0)
-    @Max(255)
+    @Max(127)
     private Integer usageCount;
 
     /**

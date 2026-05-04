@@ -1,21 +1,22 @@
-# 订单使用记录查询接口文档
+# 使用记录查询接口文档
 
 ## 基本信息
 
-- 接口名称：订单使用记录查询
+- 接口名称：使用记录查询
 - 请求方式：`GET`
 - 请求路径：`/api/order/usage-records`
 - 完整示例：`http://localhost:8877/api/order/usage-records?phone=13800138000&pageNo=1&pageSize=10`
 
 ## 业务说明
 
-用于查询订单使用记录，支持按以下条件筛选：
+用于查询设备实际使用记录（来源 `usage_record` 表），支持按以下条件筛选：
 
 - 用户手机号 `phone`
 - 用户ID `userId`
 - 设备ID `deviceId`
 
-支持分页，按创建时间倒序展示：`created_at DESC, id DESC`。
+支持分页，按创建时间倒序展示：`created_at DESC, id DESC`。  
+注意：该接口查询的是“实际使用记录”，不是下单记录。
 
 ## 请求参数
 
@@ -29,7 +30,6 @@
 
 参数规则：
 
-- `phone`、`userId`、`deviceId` 不能同时为空
 - `phone` 传值时必须为11位数字
 - `userId`、`deviceId` 传值时必须大于0
 
@@ -72,7 +72,7 @@
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| orderId | number | 订单ID |
+| orderId | number | 使用记录ID（`usage_record.id`） |
 | userId | number | 用户ID |
 | merchantId | number | 商家ID |
 | deviceName | string/null | 设备名称 |
@@ -122,17 +122,7 @@
 
 ## 失败响应示例
 
-### 1) 查询条件全部为空
-
-```json
-{
-  "code": "400",
-  "msg": "phone、userId和deviceId不能同时为空",
-  "data": null
-}
-```
-
-### 2) 手机号格式错误
+### 1) 手机号格式错误
 
 ```json
 {
@@ -142,7 +132,7 @@
 }
 ```
 
-### 3) ID参数非法
+### 2) ID参数非法
 
 ```json
 {
@@ -165,7 +155,7 @@ type QueryOrderUsageParams = {
   pageSize?: number;
 };
 
-export async function queryOrderUsageRecords(params: QueryOrderUsageParams) {
+export async function queryUsageRecords(params: QueryOrderUsageParams) {
   const search = new URLSearchParams();
   if (params.phone) search.set("phone", params.phone);
   if (params.userId != null) search.set("userId", String(params.userId));
@@ -176,7 +166,7 @@ export async function queryOrderUsageRecords(params: QueryOrderUsageParams) {
   const res = await fetch(`${API_BASE}/api/order/usage-records?${search.toString()}`);
   const result = await res.json();
   if (result.code !== "0") {
-    throw new Error(result.msg || "查询订单使用记录失败");
+    throw new Error(result.msg || "查询使用记录失败");
   }
   return result.data;
 }

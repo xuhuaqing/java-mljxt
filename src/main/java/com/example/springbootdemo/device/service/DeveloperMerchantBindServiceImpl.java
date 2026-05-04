@@ -69,6 +69,19 @@ public class DeveloperMerchantBindServiceImpl implements DeveloperMerchantBindSe
     }
 
     @Override
+    @Transactional
+    public BindDeveloperMerchantVO unbind(BindDeveloperMerchantRequest request) {
+        if (userMapper.findDeveloperById(request.getDeveloperId()) == null) {
+            throw new IllegalArgumentException("开发不存在");
+        }
+        if (userMapper.findMerchantById(request.getMerchantId()) == null) {
+            throw new IllegalArgumentException("商家不存在");
+        }
+        int affected = developerMerchantBindMapper.deleteByDeveloperAndMerchant(request.getDeveloperId(), request.getMerchantId());
+        return new BindDeveloperMerchantVO(request.getDeveloperId(), request.getMerchantId(), affected == 0);
+    }
+
+    @Override
     public List<DeveloperBoundDeviceVO> listBoundMerchants(Long developerId) {
         if (developerId == null || developerId <= 0) {
             throw new IllegalArgumentException("developerId不能为空且必须大于0");

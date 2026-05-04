@@ -64,7 +64,8 @@
     "phone": "13800138000",
     "role": 1,
     "roleName": "用户",
-    "remainingUseCount": null
+    "remainingUseCount": null,
+    "token": "登录后访问后台API使用的Bearer Token"
   }
 }
 ```
@@ -80,7 +81,8 @@
     "phone": "13900000001",
     "role": 3,
     "roleName": "商家",
-    "remainingUseCount": 88
+    "remainingUseCount": 88,
+    "token": "登录后访问后台API使用的Bearer Token"
   }
 }
 ```

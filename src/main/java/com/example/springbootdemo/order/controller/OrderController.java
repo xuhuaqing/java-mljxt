@@ -51,4 +51,21 @@ public class OrderController {
                 result.total(), result.pageNo(), result.pageSize());
         return ApiResponse.success(result);
     }
+
+    @GetMapping("/order-records")
+    public ApiResponse<OrderUsagePageVO> orderRecords(
+            @RequestParam(value = "phone", required = false) String phone,
+            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "merchantId", required = false) Long merchantId,
+            @RequestParam(value = "deviceId", required = false) Long deviceId,
+            @RequestParam(value = "pageNo", required = false) Integer pageNo,
+            @RequestParam(value = "pageSize", required = false) Integer pageSize
+    ) {
+        log.info("调用接口 /api/order/order-records, phone={}, userId={}, merchantId={}, deviceId={}, pageNo={}, pageSize={}",
+                phone, userId, merchantId, deviceId, pageNo, pageSize);
+        OrderUsagePageVO result = orderService.queryOrderRecords(phone, userId, merchantId, deviceId, pageNo, pageSize);
+        log.info("查询下单记录完成 /api/order/order-records, total={}, pageNo={}, pageSize={}",
+                result.total(), result.pageNo(), result.pageSize());
+        return ApiResponse.success(result);
+    }
 }

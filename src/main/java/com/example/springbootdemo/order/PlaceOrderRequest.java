@@ -51,8 +51,8 @@ public class PlaceOrderRequest {
     private Long deviceId;
 
     @NotNull(message = "使用次数不能为空")
-    @Min(value = 1, message = "使用次数范围为1-255")
-    @Max(value = 255, message = "使用次数范围为1-255")
+    @Min(value = 1, message = "使用次数范围为1-127")
+    @Max(value = 127, message = "使用次数范围为1-127")
     private Integer usageCount;
 
     public String getPhone() {

@@ -5,6 +5,7 @@ public record LoginUserVO(
         String phone,
         Integer role,
         String roleName,
-        Integer remainingUseCount
+        Integer remainingUseCount,
+        String token
 ) {
 }

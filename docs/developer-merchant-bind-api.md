@@ -109,6 +109,11 @@
 查询某个开发账号已绑定商家下的设备列表。  
 返回按“设备维度”展开（同一个商家有多台设备会返回多条）。
 
+字段说明补充：
+
+- `remainingUseCount`：商家当前剩余可用次数（来自 `user_account.remaining_use_count`）
+- `merchantTotalDeviceUsageCount`：商家累计设备使用次数，统计来源 `usage_record`，计算方式为 `SUM(usage_count)`
+
 ### 请求参数
 
 | 字段 | 类型 | 必填 | 说明 |
