@@ -7,8 +7,11 @@ import com.example.springbootdemo.auth.service.AuthService;
 import com.example.springbootdemo.common.ApiResponse;
 import com.example.springbootdemo.device.AdminDeviceUpsertRequest;
 import com.example.springbootdemo.device.AdminDeviceVO;
+import com.example.springbootdemo.device.BindDeviceMerchantRequest;
 import com.example.springbootdemo.device.UpdateDeviceDeadlineRequest;
+import com.example.springbootdemo.device.AdminWithdrawRecordPageVO;
 import com.example.springbootdemo.device.service.DeviceService;
+import com.example.springbootdemo.device.service.DeveloperMerchantBindService;
 import com.example.springbootdemo.order.AdminDeviceUsageRecordVO;
 import com.example.springbootdemo.order.service.OrderService;
 import com.example.springbootdemo.security.AuthContext;
@@ -42,11 +45,18 @@ public class AdminController {
     private final AuthService authService;
     private final DeviceService deviceService;
     private final OrderService orderService;
+    private final DeveloperMerchantBindService developerMerchantBindService;
 
-    public AdminController(AuthService authService, DeviceService deviceService, OrderService orderService) {
+    public AdminController(
+            AuthService authService,
+            DeviceService deviceService,
+            OrderService orderService,
+            DeveloperMerchantBindService developerMerchantBindService
+    ) {
         this.authService = authService;
         this.deviceService = deviceService;
         this.orderService = orderService;
+        this.developerMerchantBindService = developerMerchantBindService;
     }
 
     @GetMapping("/me")
@@ -66,7 +76,9 @@ public class AdminController {
                 Map.of("path", "/users", "name", "用户列表"),
                 Map.of("path", "/devices", "name", "设备管理"),
                 Map.of("path", "/device-usage-records", "name", "设备使用记录"),
-                Map.of("path", "/developer-merchant-bind", "name", "开发绑定商家")
+                Map.of("path", "/order-records", "name", "下单记录"),
+                Map.of("path", "/developer-merchant-bind", "name", "合伙人绑定商家"),
+                Map.of("path", "/withdraw-records", "name", "提现明细列表")
         );
         return ApiResponse.success(menus);
     }
@@ -166,6 +178,43 @@ public class AdminController {
         return ApiResponse.success(null);
     }
 
+    @PutMapping("/devices/{id}/unbind-merchant")
+    public ApiResponse<Void> unbindDeviceMerchant(@PathVariable Long id) {
+        requireAdmin(AuthContext.get());
+        deviceService.unbindMerchant(id);
+        return ApiResponse.success(null);
+    }
+
+    @PutMapping("/devices/{id}/merchant")
+    public ApiResponse<Void> bindDeviceMerchant(@PathVariable Long id, @Valid @RequestBody BindDeviceMerchantRequest request) {
+        requireAdmin(AuthContext.get());
+        deviceService.bindMerchant(id, request.getMerchantId());
+        return ApiResponse.success(null);
+    }
+
+    @GetMapping("/order-records")
+    public ApiResponse<Map<String, Object>> orderRecords(
+            @RequestParam(required = false) Long merchantId,
+            @RequestParam(required = false) Long deviceId,
+            @RequestParam(required = false) String phone,
+            @RequestParam(defaultValue = "1") Integer pageNo,
+            @RequestParam(defaultValue = "20") Integer pageSize
+    ) {
+        requireAdmin(AuthContext.get());
+        if (pageNo < 1 || pageSize < 1 || pageSize > 200) {
+            throw new IllegalArgumentException("分页参数不合法");
+        }
+        List<com.example.springbootdemo.order.AdminOrderRecordVO> records =
+                orderService.queryAdminOrderRecords(merchantId, deviceId, phone, pageNo, pageSize);
+        long total = orderService.countAdminOrderRecords(merchantId, deviceId, phone);
+        return ApiResponse.success(Map.of(
+                "total", total,
+                "pageNo", pageNo,
+                "pageSize", pageSize,
+                "records", records
+        ));
+    }
+
     @GetMapping("/device-usage-records")
     public ApiResponse<Map<String, Object>> deviceUsageRecords(
             @RequestParam(required = false) Long merchantId,
@@ -187,6 +236,24 @@ public class AdminController {
         ));
     }
 
+    @GetMapping("/withdraw-records")
+    public ApiResponse<AdminWithdrawRecordPageVO> withdrawRecords(
+            @RequestParam(required = false) Long developerId,
+            @RequestParam(defaultValue = "1") Integer pageNo,
+            @RequestParam(defaultValue = "20") Integer pageSize
+    ) {
+        requireAdmin(AuthContext.get());
+        if (pageNo < 1 || pageSize < 1 || pageSize > 100) {
+            throw new IllegalArgumentException("分页参数不合法");
+        }
+        log.info("调用接口 /api/admin/withdraw-records, developerId={}, pageNo={}, pageSize={}",
+                developerId, pageNo, pageSize);
+        AdminWithdrawRecordPageVO result = developerMerchantBindService.listWithdrawRecordsForAdmin(
+                developerId, pageNo, pageSize
+        );
+        return ApiResponse.success(result);
+    }
+
     @GetMapping("/device-usage-records/export")
     public ResponseEntity<byte[]> exportDeviceUsageRecords(
             @RequestParam(required = false) Long merchantId,
@@ -195,7 +262,7 @@ public class AdminController {
         requireAdmin(AuthContext.get());
         List<AdminDeviceUsageRecordVO> rows = orderService.queryAdminDeviceUsageRecordsForExport(merchantId, deviceId);
         StringBuilder sb = new StringBuilder();
-        sb.append("使用记录ID\t商家ID\t商家名称\t设备ID\t设备名称\t用户ID\t用户手机号\t项目名称\t使用次数\t创建时间\n");
+        sb.append("使用记录ID\t商家ID\t商家名称\t设备ID\t设备名称\t用户ID\t用户姓名\t用户手机号\t项目名称\t使用次数\t创建时间\n");
         for (AdminDeviceUsageRecordVO r : rows) {
             sb.append(n(r.orderId())).append('\t')
                     .append(n(r.merchantId())).append('\t')
@@ -203,6 +270,7 @@ public class AdminController {
                     .append(n(r.deviceId())).append('\t')
                     .append(n(r.deviceName())).append('\t')
                     .append(n(r.userId())).append('\t')
+                    .append(n(r.userName())).append('\t')
                     .append(n(r.userPhone())).append('\t')
                     .append(n(r.projectName())).append('\t')
                     .append(n(r.usageCount())).append('\t')

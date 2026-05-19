@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -56,6 +57,9 @@ public class AuthServiceImpl implements AuthService {
         UserEntity user = userMapper.findByPhoneAndRole(request.getAccount(), request.getRole());
         if (user == null) {
             throw new IllegalArgumentException("手机号或身份不存在");
+        }
+        if (!Objects.equals(user.getStatus(), 1)) {
+            throw new IllegalArgumentException("账号已停用，无法登录");
         }
         if (!request.getPassword().equals(user.getPassword())) {
             throw new IllegalArgumentException("密码错误");
@@ -104,9 +108,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AdminUserVO createUser(AdminUserUpsertRequest request) {
-        UserEntity exists = userMapper.findByPhone(request.getPhone());
+        UserEntity exists = userMapper.findByPhoneAndRole(request.getPhone(), request.getRole());
         if (exists != null) {
-            throw new IllegalArgumentException("手机号已存在");
+            throw new IllegalArgumentException("该手机号在此身份下已存在");
         }
         UserEntity user = new UserEntity();
         user.setName(request.getName());
@@ -127,9 +131,9 @@ public class AuthServiceImpl implements AuthService {
         if (current == null || current.getRole() == null || current.getRole() < 1 || current.getRole() > 4) {
             throw new IllegalArgumentException("用户不存在");
         }
-        UserEntity exists = userMapper.findByPhone(request.getPhone());
+        UserEntity exists = userMapper.findByPhoneAndRole(request.getPhone(), request.getRole());
         if (exists != null && !exists.getId().equals(id)) {
-            throw new IllegalArgumentException("手机号已存在");
+            throw new IllegalArgumentException("该手机号在此身份下已存在");
         }
         current.setName(request.getName());
         current.setPhone(request.getPhone());

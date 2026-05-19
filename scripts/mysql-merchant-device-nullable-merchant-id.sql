@@ -1,0 +1,3 @@
+-- 设备与商家解绑会将 merchant_device.merchant_id 置为 NULL。
+-- 若列当前为 NOT NULL，请先执行（按实际表结构调整）：
+-- ALTER TABLE merchant_device MODIFY COLUMN merchant_id BIGINT NULL;

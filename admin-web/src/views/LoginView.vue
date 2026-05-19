@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-left">
       <div class="hello-title">MLJXT 后台管理系统</div>
-      <div class="hello-sub">统一后台账号登录，集中查看用户、老师、商家、开发四类账号数据。</div>
+      <div class="hello-sub">统一后台账号登录，集中查看用户、老师、商家、合伙人四类账号数据。</div>
     </div>
     <el-card class="login-card" shadow="never">
       <template #header>

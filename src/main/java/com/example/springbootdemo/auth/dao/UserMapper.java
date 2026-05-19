@@ -24,14 +24,6 @@ public interface UserMapper {
     @Select("""
             SELECT id, name, phone, password, role, status, remaining_use_count AS remainingUseCount
             FROM user_account
-            WHERE phone = #{phone}
-            LIMIT 1
-            """)
-    UserEntity findByPhone(@Param("phone") String phone);
-
-    @Select("""
-            SELECT id, name, phone, password, role, status, remaining_use_count AS remainingUseCount
-            FROM user_account
             WHERE id = #{id}
             LIMIT 1
             """)
@@ -84,6 +76,22 @@ public interface UserMapper {
             </script>
             """)
     List<UserEntity> searchMerchants(@Param("keyword") String keyword);
+
+    @Select("""
+            <script>
+            SELECT DISTINCT ua.id, ua.name, ua.phone, ua.password, ua.role, ua.status, ua.remaining_use_count AS remainingUseCount
+            FROM user_account ua
+            INNER JOIN order_record o ON o.merchant_id = ua.id
+            WHERE ua.role = 3
+              AND o.user_id = #{userId}
+              <if test="keyword != null and keyword != ''">
+                AND ua.name LIKE CONCAT('%', #{keyword}, '%')
+              </if>
+            ORDER BY ua.id DESC
+            LIMIT 100
+            </script>
+            """)
+    List<UserEntity> searchMerchantsByUserOrders(@Param("userId") Long userId, @Param("keyword") String keyword);
 
     @Update("""
             UPDATE user_account

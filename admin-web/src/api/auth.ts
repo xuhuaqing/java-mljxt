@@ -75,7 +75,7 @@ export async function fetchDevices(params: { merchantId?: number; keyword?: stri
     pageNo: number;
     pageSize: number;
     records: Array<{
-      id: number; machineNo: string; deviceName: string; status: number; merchantId: number; merchantName: string; freeUseDeadline: string | null;
+      id: number; machineNo: string; deviceName: string; status: number; merchantId: number | null; merchantName: string | null; freeUseDeadline: string | null;
     }>;
   };
 }
@@ -100,6 +100,16 @@ export async function enableDevice(id: number) {
   if (data.code !== "0") throw new Error(data.msg || "启用设备失败");
 }
 
+export async function unbindDeviceMerchant(id: number) {
+  const { data } = await http.put(`/api/admin/devices/${id}/unbind-merchant`);
+  if (data.code !== "0") throw new Error(data.msg || "解绑商家失败");
+}
+
+export async function bindDeviceMerchant(id: number, merchantId: number) {
+  const { data } = await http.put(`/api/admin/devices/${id}/merchant`, { merchantId });
+  if (data.code !== "0") throw new Error(data.msg || "绑定商家失败");
+}
+
 export async function fetchDeviceOptionsByMerchant(merchantId?: number) {
   if (!merchantId) return [] as Array<{ id: number; deviceName: string; machineNo: string }>;
   const { data } = await http.get("/api/device/list-by-merchant", { params: { merchantId } });
@@ -115,7 +125,7 @@ export async function fetchDeviceUsageRecords(params: { merchantId?: number; dev
     pageNo: number;
     pageSize: number;
     records: Array<{
-      orderId: number; merchantId: number; merchantName: string; deviceId: number; deviceName: string; userId: number; userPhone: string;
+      orderId: number; merchantId: number; merchantName: string; deviceId: number; deviceName: string; userId: number; userName: string; userPhone: string;
       projectName: string; usageCount: number; createdAt: string;
     }>;
   };
@@ -129,7 +139,17 @@ export function exportDeviceUsageRecords(params: { merchantId?: number; deviceId
   const url = `/api/admin/device-usage-records/export${query.toString() ? `?${query}` : ""}`;
   return fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
     .then(async (r) => {
-      if (!r.ok) throw new Error("导出失败");
+      if (!r.ok) {
+        const text = await r.text();
+        let msg = "导出失败";
+        try {
+          const j = JSON.parse(text) as { msg?: unknown };
+          if (typeof j?.msg === "string" && j.msg.trim()) msg = j.msg.trim();
+        } catch {
+          /* 非 JSON 错误体则沿用默认文案 */
+        }
+        throw new Error(msg);
+      }
       const blob = await r.blob();
       const objUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -150,6 +170,58 @@ export async function unbindDeveloperMerchant(payload: { developerId: number; me
   const { data } = await http.post("/api/developer-merchant/unbind", payload);
   if (data.code !== "0") throw new Error(data.msg || "解绑失败");
   return data.data as { developerId: number; merchantId: number; alreadyBound: boolean };
+}
+
+export async function fetchOrderRecords(params: {
+  merchantId?: number;
+  deviceId?: number;
+  phone?: string;
+  pageNo: number;
+  pageSize: number;
+}) {
+  const { data } = await http.get("/api/admin/order-records", { params });
+  if (data.code !== "0") throw new Error(data.msg || "获取下单记录失败");
+  return data.data as {
+    total: number;
+    pageNo: number;
+    pageSize: number;
+    records: Array<{
+      orderId: number;
+      userId: number;
+      userName: string;
+      userPhone: string;
+      merchantId: number;
+      merchantName: string;
+      deviceId: number;
+      deviceName: string;
+      projectName: string;
+      projectDuration: number;
+      usageCount: number;
+      createdAt: string;
+    }>;
+  };
+}
+
+export async function fetchWithdrawRecords(params: {
+  developerId?: number;
+  pageNo: number;
+  pageSize: number;
+}) {
+  const { data } = await http.get("/api/admin/withdraw-records", { params });
+  if (data.code !== "0") throw new Error(data.msg || "获取提现明细失败");
+  return data.data as {
+    total: number;
+    pageNo: number;
+    pageSize: number;
+    records: Array<{
+      withdrawRecordId: number;
+      developerId: number;
+      developerName: string;
+      developerPhone: string;
+      usageCountSnapshot: number;
+      createdAt: string;
+    }>;
+  };
 }
 
 export async function fetchDeveloperBoundList(developerId: number) {

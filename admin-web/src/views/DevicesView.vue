@@ -26,16 +26,29 @@
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="machineNo" label="设备编号" width="150" />
       <el-table-column prop="deviceName" label="设备名称" min-width="160" />
-      <el-table-column prop="merchantName" label="所属商家" width="140" />
+      <el-table-column prop="merchantName" label="所属商家" width="140">
+        <template #default="{ row }">
+          {{ row.merchantName || "—" }}
+        </template>
+      </el-table-column>
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? "启用" : "停用" }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="freeUseDeadline" label="免费使用截止时间" width="190" />
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column label="操作" width="340" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openDeadline(row)">设置截止时间</el-button>
+          <el-button link type="primary" :disabled="!!row.merchantId" @click="openBind(row)">绑定商家</el-button>
+          <el-button
+            link
+            type="warning"
+            :disabled="!row.merchantId"
+            @click="unbindMerchant(row)"
+          >
+            解绑商家
+          </el-button>
           <el-button link type="danger" :disabled="row.status === 0" @click="stopDevice(row)">停用</el-button>
           <el-button link type="success" :disabled="row.status === 1" @click="startDevice(row)">启用</el-button>
         </template>
@@ -92,6 +105,31 @@
     </div>
   </div>
 
+  <div v-if="bindVisible" class="modal-mask" @click.self="bindVisible = false">
+    <div class="modal-panel">
+      <div class="modal-title">绑定商家</div>
+      <el-form label-width="90px">
+        <el-form-item label="商家">
+          <el-select
+            v-model="bindForm.merchantId"
+            filterable
+            remote
+            :remote-method="searchMerchants"
+            :teleported="false"
+            placeholder="选择商家"
+            style="width: 100%"
+          >
+            <el-option v-for="m in merchants" :key="m.id" :label="m.name" :value="m.id" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <div class="modal-actions">
+        <el-button @click="bindVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitBind">确定</el-button>
+      </div>
+    </div>
+  </div>
+
   <div v-if="deadlineVisible" class="modal-mask" @click.self="deadlineVisible = false">
     <div class="modal-panel deadline-panel">
       <div class="modal-title">设置免费使用截止时间</div>
@@ -113,8 +151,8 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
-import { ElMessage } from "element-plus";
-import { createDevice, disableDevice, enableDevice, fetchDevices, fetchMerchantOptions, updateDeviceDeadline } from "../api/auth";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { bindDeviceMerchant, createDevice, disableDevice, enableDevice, fetchDevices, fetchMerchantOptions, unbindDeviceMerchant, updateDeviceDeadline } from "../api/auth";
 
 const rows = ref<Array<any>>([]);
 const total = ref(0);
@@ -123,6 +161,9 @@ const query = reactive({ merchantId: undefined as number | undefined, keyword: "
 
 const createVisible = ref(false);
 const createForm = reactive({ machineNo: "", deviceName: "", merchantId: undefined as number | undefined, freeUseDeadline: "" as string | null });
+
+const bindVisible = ref(false);
+const bindForm = reactive({ id: 0, merchantId: undefined as number | undefined });
 
 const deadlineVisible = ref(false);
 const deadlineForm = reactive({ id: 0, freeUseDeadline: "" });
@@ -213,6 +254,54 @@ async function startDevice(row: any) {
     load(query.pageNo);
   } catch (e: any) {
     ElMessage.error(e?.message || "启用失败");
+  }
+}
+
+function openBind(row: any) {
+  if (row.merchantId) {
+    ElMessage.info("该设备已绑定商家");
+    return;
+  }
+  bindForm.id = row.id;
+  bindForm.merchantId = undefined;
+  bindVisible.value = true;
+}
+
+async function submitBind() {
+  if (!bindForm.merchantId) {
+    ElMessage.warning("请选择商家");
+    return;
+  }
+  try {
+    await bindDeviceMerchant(bindForm.id, bindForm.merchantId);
+    ElMessage.success("绑定成功");
+    bindVisible.value = false;
+    load(query.pageNo);
+  } catch (e: any) {
+    ElMessage.error(e?.message || "绑定失败");
+  }
+}
+
+async function unbindMerchant(row: any) {
+  if (!row.merchantId) {
+    ElMessage.info("当前设备未绑定商家");
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定将设备「${row.deviceName || row.machineNo}」与商家「${row.merchantName || ""}」解绑吗？解绑后需重新指定商家才可归属到商家名下。`,
+      "解绑商家",
+      { type: "warning", confirmButtonText: "解绑", cancelButtonText: "取消" }
+    );
+  } catch {
+    return;
+  }
+  try {
+    await unbindDeviceMerchant(row.id);
+    ElMessage.success("解绑成功");
+    load(query.pageNo);
+  } catch (e: any) {
+    ElMessage.error(e?.message || "解绑失败");
   }
 }
 

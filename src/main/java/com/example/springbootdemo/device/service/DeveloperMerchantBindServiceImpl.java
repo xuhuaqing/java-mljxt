@@ -1,6 +1,8 @@
 package com.example.springbootdemo.device.service;
 
 import com.example.springbootdemo.auth.dao.UserMapper;
+import com.example.springbootdemo.device.AdminWithdrawRecordPageVO;
+import com.example.springbootdemo.device.AdminWithdrawRecordVO;
 import com.example.springbootdemo.device.BindDeveloperMerchantRequest;
 import com.example.springbootdemo.device.BindDeveloperMerchantVO;
 import com.example.springbootdemo.device.DeveloperBoundDeviceVO;
@@ -11,10 +13,13 @@ import com.example.springbootdemo.device.dao.DeviceEntity;
 import com.example.springbootdemo.device.dao.DeviceMapper;
 import com.example.springbootdemo.device.dao.DeveloperMerchantBindMapper;
 import com.example.springbootdemo.device.dao.DeveloperMerchantBindRow;
+import com.example.springbootdemo.device.dao.AdminWithdrawRecordRow;
 import com.example.springbootdemo.device.dao.DeveloperWithdrawRecordEntity;
 import com.example.springbootdemo.device.dao.DeveloperWithdrawRecordMapper;
 import com.example.springbootdemo.order.dao.MerchantUsageStatRow;
 import com.example.springbootdemo.order.dao.OrderMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +31,8 @@ import java.util.Map;
 
 @Service
 public class DeveloperMerchantBindServiceImpl implements DeveloperMerchantBindService {
+
+    private static final Logger log = LoggerFactory.getLogger(DeveloperMerchantBindServiceImpl.class);
 
     private final UserMapper userMapper;
     private final DeveloperMerchantBindMapper developerMerchantBindMapper;
@@ -51,20 +58,25 @@ public class DeveloperMerchantBindServiceImpl implements DeveloperMerchantBindSe
     @Transactional
     public BindDeveloperMerchantVO bind(BindDeveloperMerchantRequest request) {
         if (userMapper.findDeveloperById(request.getDeveloperId()) == null) {
-            throw new IllegalArgumentException("开发不存在");
+            throw new IllegalArgumentException("合伙人不存在");
         }
         if (userMapper.findMerchantById(request.getMerchantId()) == null) {
             throw new IllegalArgumentException("商家不存在");
         }
 
-        int exists = developerMerchantBindMapper.countByDeveloperAndMerchant(
-                request.getDeveloperId(), request.getMerchantId()
-        );
-        if (exists > 0) {
-            return new BindDeveloperMerchantVO(request.getDeveloperId(), request.getMerchantId(), true);
+        Long boundDeveloperId = developerMerchantBindMapper.findDeveloperIdByMerchantId(request.getMerchantId());
+        if (boundDeveloperId != null) {
+            if (boundDeveloperId.equals(request.getDeveloperId())) {
+                log.info("合伙人绑定商家（已存在） developerId={}, merchantId={}", request.getDeveloperId(), request.getMerchantId());
+                return new BindDeveloperMerchantVO(request.getDeveloperId(), request.getMerchantId(), true);
+            }
+            log.warn("合伙人绑定商家被拒绝：商家已被其他合伙人占用 merchantId={}, 当前合伙人={}, 已绑定合伙人={}",
+                    request.getMerchantId(), request.getDeveloperId(), boundDeveloperId);
+            throw new IllegalArgumentException("该商家已被其他合伙人绑定");
         }
 
         developerMerchantBindMapper.insert(request.getDeveloperId(), request.getMerchantId());
+        log.info("合伙人绑定商家成功 developerId={}, merchantId={}", request.getDeveloperId(), request.getMerchantId());
         return new BindDeveloperMerchantVO(request.getDeveloperId(), request.getMerchantId(), false);
     }
 
@@ -72,7 +84,7 @@ public class DeveloperMerchantBindServiceImpl implements DeveloperMerchantBindSe
     @Transactional
     public BindDeveloperMerchantVO unbind(BindDeveloperMerchantRequest request) {
         if (userMapper.findDeveloperById(request.getDeveloperId()) == null) {
-            throw new IllegalArgumentException("开发不存在");
+            throw new IllegalArgumentException("合伙人不存在");
         }
         if (userMapper.findMerchantById(request.getMerchantId()) == null) {
             throw new IllegalArgumentException("商家不存在");
@@ -87,7 +99,7 @@ public class DeveloperMerchantBindServiceImpl implements DeveloperMerchantBindSe
             throw new IllegalArgumentException("developerId不能为空且必须大于0");
         }
         if (userMapper.findDeveloperById(developerId) == null) {
-            throw new IllegalArgumentException("开发不存在");
+            throw new IllegalArgumentException("合伙人不存在");
         }
         List<DeveloperMerchantBindRow> rows = developerMerchantBindMapper.listByDeveloperId(developerId);
         if (rows.isEmpty()) {
@@ -126,7 +138,7 @@ public class DeveloperMerchantBindServiceImpl implements DeveloperMerchantBindSe
     public DeveloperWithdrawVO withdraw(DeveloperWithdrawRequest request) {
         Long developerId = request.getDeveloperId();
         if (userMapper.findDeveloperById(developerId) == null) {
-            throw new IllegalArgumentException("开发不存在");
+            throw new IllegalArgumentException("合伙人不存在");
         }
         if (developerWithdrawRecordMapper.countTodayByDeveloperId(developerId) > 0) {
             throw new IllegalArgumentException("今日已提现，请明天再试");
@@ -153,7 +165,7 @@ public class DeveloperMerchantBindServiceImpl implements DeveloperMerchantBindSe
             throw new IllegalArgumentException("developerId不能为空且必须大于0");
         }
         if (userMapper.findDeveloperById(developerId) == null) {
-            throw new IllegalArgumentException("开发不存在");
+            throw new IllegalArgumentException("合伙人不存在");
         }
 
         int finalPageNo = (pageNo == null || pageNo < 1) ? 1 : pageNo;
@@ -172,5 +184,38 @@ public class DeveloperMerchantBindServiceImpl implements DeveloperMerchantBindSe
                 .toList();
 
         return new DeveloperWithdrawPageVO(total, finalPageNo, finalPageSize, records);
+    }
+
+    @Override
+    public AdminWithdrawRecordPageVO listWithdrawRecordsForAdmin(Long developerId, Integer pageNo, Integer pageSize) {
+        if (developerId != null && developerId <= 0) {
+            throw new IllegalArgumentException("developerId必须大于0");
+        }
+        if (developerId != null && userMapper.findDeveloperById(developerId) == null) {
+            throw new IllegalArgumentException("合伙人不存在");
+        }
+
+        int finalPageNo = (pageNo == null || pageNo < 1) ? 1 : pageNo;
+        int finalPageSize = (pageSize == null || pageSize < 1) ? 20 : Math.min(pageSize, 100);
+        int offset = (finalPageNo - 1) * finalPageSize;
+
+        long total = developerWithdrawRecordMapper.countForAdmin(developerId);
+        List<AdminWithdrawRecordVO> records = developerWithdrawRecordMapper.listForAdmin(developerId, offset, finalPageSize)
+                .stream()
+                .map(this::toAdminWithdrawVO)
+                .toList();
+
+        return new AdminWithdrawRecordPageVO(total, finalPageNo, finalPageSize, records);
+    }
+
+    private AdminWithdrawRecordVO toAdminWithdrawVO(AdminWithdrawRecordRow row) {
+        return new AdminWithdrawRecordVO(
+                row.getId(),
+                row.getDeveloperId(),
+                row.getDeveloperName(),
+                row.getDeveloperPhone(),
+                row.getUsageCountSnapshot(),
+                row.getCreatedAt()
+        );
     }
 }

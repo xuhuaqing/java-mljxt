@@ -20,10 +20,11 @@
    - 若传了 `machineNo`，优先用传入机器号
    - 否则使用订单 `deviceId` 对应的设备
 4. 校验设备状态、商家状态与剩余次数（非免费期）
-5. 发送 MQTT
-6. 写入 `usage_record` 使用记录（`usage_count` 固定为 `1`）
-7. 非免费期扣减商家 `remaining_use_count`
-8. 扣减订单 `order_record.usage_count`（减1，减到0后不可再用）
+5. **设备占用互斥**：若该设备上已有未结束的使用记录（已发 MQTT 且仍在 `project_duration` 分钟内），其他用户不可再使用；同一用户也需等待当前项目结束
+6. 发送 MQTT
+7. 写入 `usage_record` 使用记录（`usage_count` 固定为 `1`）
+8. 非免费期扣减商家 `remaining_use_count`
+9. 扣减订单 `order_record.usage_count`（减1，减到0后不可再用）
 
 ## 请求体（JSON）
 

@@ -4,7 +4,7 @@ public enum UserRole {
     USER(1, "用户"),
     TEACHER(2, "老师"),
     MERCHANT(3, "商家"),
-    DEVELOPER(4, "开发");
+    DEVELOPER(4, "合伙人");
 
     private final int code;
     private final String label;

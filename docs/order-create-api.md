@@ -12,11 +12,14 @@
 该接口只负责创建“下单记录”（写入 `order_record`），不代表设备已实际执行。  
 设备实际执行/消耗记录请使用“使用记录接口”（来源 `usage_record`）。
 
+若请求中指定了 `deviceId`，且该设备当前处于使用中（已有用户通过 MQTT 下发且项目时长未结束），将拒绝下单，避免使用期间重复占用。
+
 ## 请求体（JSON）
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | phone | string | 是 | 用户手机号，11位数字 |
+| name | string | 是 | 用户姓名，最长50字符 |
 | gender | number | 是 | 性别：`0`男，`1`女 |
 | age | number | 是 | 年龄：`1-120` |
 | height | number | 是 | 身高（cm）：`50-250` |
@@ -33,6 +36,7 @@
 ```json
 {
   "phone": "17612718888",
+  "name": "张三",
   "gender": 1,
   "age": 28,
   "height": 165,
@@ -64,6 +68,7 @@
 |---|---|---|
 | orderId | number | 下单记录ID（`order_record.id`） |
 | userId | number | 用户ID |
+| userName | string | 用户姓名 |
 | phone | string | 用户手机号 |
 | merchantId | number | 商家ID |
 | projectName | string | 项目名称 |
@@ -81,6 +86,7 @@
   "data": {
     "orderId": 201,
     "userId": 16,
+    "userName": "张三",
     "phone": "17612718888",
     "merchantId": 3,
     "projectName": "腰骶温养呵护",
@@ -107,7 +113,8 @@
 接口会根据手机号先查询用户：
 
 - 若用户存在：直接使用该用户下单
-- 若用户不存在：自动创建用户（默认角色=1 用户，默认密码=手机号后四位），再下单
+- 若用户不存在：自动创建用户（姓名取请求 `name`，默认角色=1 用户，默认密码=手机号后四位），再下单
+- 若用户已存在：同步更新 `user_account.name` 为本次请求的 `name`
 
 ## 请求参数
 
@@ -161,6 +168,7 @@
 |---|---|---|
 | orderId | number | 订单ID |
 | userId | number | 用户ID |
+| userName | string | 用户姓名 |
 | phone | string | 用户手机号 |
 | merchantId | number | 商家ID |
 | projectName | string | 项目名称 |
@@ -218,6 +226,7 @@ const API_BASE = "http://localhost:8877";
 
 export type CreateOrderPayload = {
   phone: string;
+  name: string;
   gender: 0 | 1;
   age: number;
   height: number;

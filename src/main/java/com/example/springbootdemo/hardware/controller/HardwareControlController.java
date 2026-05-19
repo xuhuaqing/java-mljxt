@@ -10,6 +10,7 @@ import com.example.springbootdemo.auth.dao.UserEntity;
 import com.example.springbootdemo.auth.dao.UserMapper;
 import com.example.springbootdemo.device.dao.DeviceEntity;
 import com.example.springbootdemo.device.dao.DeviceMapper;
+import com.example.springbootdemo.device.service.DeviceUsageGuardService;
 import com.example.springbootdemo.order.dao.OrderEntity;
 import com.example.springbootdemo.order.dao.OrderMapper;
 import com.example.springbootdemo.hardware.service.DeviceMqttService;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/hardware")
@@ -43,27 +46,33 @@ public class HardwareControlController {
     private final DeviceMapper deviceMapper;
     private final UserMapper userMapper;
     private final OrderMapper orderMapper;
+    private final DeviceUsageGuardService deviceUsageGuardService;
 
     public HardwareControlController(HardwareProtocolService protocolService,
                                      DeviceMqttService mqttService,
                                      ProjectCatalogService projectCatalogService,
                                      DeviceMapper deviceMapper,
                                      UserMapper userMapper,
-                                     OrderMapper orderMapper) {
+                                     OrderMapper orderMapper,
+                                     DeviceUsageGuardService deviceUsageGuardService) {
         this.protocolService = protocolService;
         this.mqttService = mqttService;
         this.projectCatalogService = projectCatalogService;
         this.deviceMapper = deviceMapper;
         this.userMapper = userMapper;
         this.orderMapper = orderMapper;
+        this.deviceUsageGuardService = deviceUsageGuardService;
     }
 
     @GetMapping("/commands")
-    public HardwareControlResponse commands() {
-        log.info("调用接口 /api/hardware/commands");
+    public HardwareControlResponse commands(
+            @RequestParam(value = "machineNo", required = false) Integer machineNo
+    ) {
+        int no = machineNo != null ? machineNo : 0;
+        log.info("调用接口 /api/hardware/commands, machineNo={}", no);
         return new HardwareControlResponse(
                 mqttService.serverCommand(),
-                mqttService.subscribeCommand(),
+                mqttService.subscribeCommandForMachine(no),
                 mqttService.publishCommand(),
                 null,
                 null,
@@ -87,12 +96,13 @@ public class HardwareControlController {
 
     @PostMapping("/frame")
     public HardwareControlResponse buildFrame(@Valid @RequestBody HardwareControlRequest request) {
-        log.info("调用接口 /api/hardware/frame, customerId={}, projectCode={}",
-                request.getCustomerId(), request.getProjectCode());
+        int machineNo = request.getMachineNo() != null ? request.getMachineNo() : 0;
+        log.info("调用接口 /api/hardware/frame, customerId={}, projectCode={}, machineNo={}",
+                request.getCustomerId(), request.getProjectCode(), machineNo);
         byte[] frame = protocolService.buildFrame(request);
         return new HardwareControlResponse(
                 mqttService.serverCommand(),
-                mqttService.subscribeCommand(),
+                mqttService.subscribeCommandForMachine(machineNo),
                 mqttService.publishCommand(),
                 protocolService.toHex(frame),
                 null,
@@ -110,7 +120,7 @@ public class HardwareControlController {
         log.info("发送完成 /api/hardware/send, customerId={}", request.getCustomerId());
         return new HardwareControlResponse(
                 mqttService.serverCommand(),
-                mqttService.subscribeCommand(),
+                mqttService.subscribeCommandForMachine(machineNo),
                 mqttService.publishCommand(),
                 protocolService.toHex(frame),
                 null,
@@ -149,9 +159,18 @@ public class HardwareControlController {
             }
         }
 
-        UserEntity user = userMapper.findByPhone(request.getCustomerId());
+        UserEntity user = userMapper.findByPhoneAndRole(request.getCustomerId(), 1);
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "用户不存在，请先登录");
+        }
+        if (!Objects.equals(user.getStatus(), 1)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "账号已停用");
+        }
+
+        try {
+            deviceUsageGuardService.lockDeviceAndAssertAvailable(device.getId(), user.getId());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
         }
 
         HardwareControlRequest control = SendByProjectRequest.toControlRequest(request, project.code());
@@ -183,7 +202,7 @@ public class HardwareControlController {
                 project.code(), project.name());
         return new HardwareControlResponse(
                 mqttService.serverCommand(),
-                mqttService.subscribeCommand(),
+                mqttService.subscribeCommandForMachine(machineNo),
                 mqttService.publishCommand(),
                 protocolService.toHex(frame),
                 project.code(),
@@ -211,6 +230,9 @@ public class HardwareControlController {
         UserEntity user = userMapper.findById(order.getUserId());
         if (user == null || user.getPhone() == null || user.getPhone().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "订单关联用户不存在");
+        }
+        if (!Objects.equals(user.getStatus(), 1)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "账号已停用");
         }
 
         DeviceEntity device = null;
@@ -241,6 +263,12 @@ public class HardwareControlController {
         boolean inFreeWindow = targetDevice.getFreeUseDeadline() != null && !LocalDateTime.now().isAfter(targetDevice.getFreeUseDeadline());
         if (!inFreeWindow && (merchant.getRemainingUseCount() == null || merchant.getRemainingUseCount() <= 0)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "商家剩余次数不足");
+        }
+
+        try {
+            deviceUsageGuardService.lockDeviceAndAssertAvailable(targetDevice.getId(), user.getId());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
         }
 
         HardwareControlRequest control = new HardwareControlRequest();
@@ -286,7 +314,7 @@ public class HardwareControlController {
 
         return new HardwareControlResponse(
                 mqttService.serverCommand(),
-                mqttService.subscribeCommand(),
+                mqttService.subscribeCommandForMachine(machineNo),
                 mqttService.publishCommand(),
                 protocolService.toHex(frame),
                 project.code(),

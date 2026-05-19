@@ -92,8 +92,18 @@ public class DeviceMqttService {
                 .formatted(properties.getIp(), properties.getPort(), properties.getUsername(), properties.getPassword());
     }
 
+    /**
+     * 服务端进程订阅的主题（如设备上行），与下行 {@link #buildPublishTopic(int)} 不同。
+     */
     public String subscribeCommand() {
         return "AT+mqttSubscribeset:Subscribe=%s".formatted(properties.getSubscribeTopic());
+    }
+
+    /**
+     * 设备必须订阅该主题才能收到 {@link #publish(byte[], int)} 下发的指令；主题与机号四位对齐。
+     */
+    public String subscribeCommandForMachine(int machineNo) {
+        return "AT+mqttSubscribeset:Subscribe=%s".formatted(buildPublishTopic(machineNo));
     }
 
     public String publishCommand() {

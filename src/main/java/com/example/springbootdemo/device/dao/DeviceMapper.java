@@ -42,6 +42,15 @@ public interface DeviceMapper {
     DeviceEntity findById(@Param("deviceId") Long deviceId);
 
     @Select("""
+            SELECT id
+            FROM merchant_device
+            WHERE id = #{deviceId}
+            LIMIT 1
+            FOR UPDATE
+            """)
+    Long selectDeviceIdForUpdate(@Param("deviceId") Long deviceId);
+
+    @Select("""
             SELECT
                 id,
                 machine_no AS machineNo,
@@ -129,4 +138,18 @@ public interface DeviceMapper {
             WHERE id = #{id}
             """)
     int enableById(@Param("id") Long id);
+
+    @Update("""
+            UPDATE merchant_device
+            SET merchant_id = NULL
+            WHERE id = #{id}
+            """)
+    int clearMerchantById(@Param("id") Long id);
+
+    @Update("""
+            UPDATE merchant_device
+            SET merchant_id = #{merchantId}
+            WHERE id = #{id}
+            """)
+    int updateMerchantById(@Param("id") Long id, @Param("merchantId") Long merchantId);
 }

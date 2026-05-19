@@ -1,15 +1,19 @@
 package com.example.springbootdemo.order;
 
-public record PlaceOrderVO(
+import java.time.LocalDateTime;
+
+public record AdminOrderRecordVO(
         Long orderId,
         Long userId,
         String userName,
-        String phone,
+        String userPhone,
         Long merchantId,
+        String merchantName,
+        Long deviceId,
+        String deviceName,
         String projectName,
         Integer projectDuration,
         Integer usageCount,
-        boolean newUserCreated,
-        String initialPassword
+        LocalDateTime createdAt
 ) {
 }

@@ -22,4 +22,8 @@ public interface DeviceService {
     void disableDevice(Long id);
 
     void enableDevice(Long id);
+
+    void unbindMerchant(Long id);
+
+    void bindMerchant(Long id, Long merchantId);
 }

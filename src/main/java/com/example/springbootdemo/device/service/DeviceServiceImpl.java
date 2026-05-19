@@ -7,7 +7,9 @@ import com.example.springbootdemo.device.DeviceOptionVO;
 import com.example.springbootdemo.device.dao.AdminDeviceRow;
 import com.example.springbootdemo.device.dao.DeviceEntity;
 import com.example.springbootdemo.device.dao.DeviceMapper;
+import com.example.springbootdemo.device.dao.TeacherDeviceBindMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,10 +19,16 @@ public class DeviceServiceImpl implements DeviceService {
 
     private final DeviceMapper deviceMapper;
     private final UserMapper userMapper;
+    private final TeacherDeviceBindMapper teacherDeviceBindMapper;
 
-    public DeviceServiceImpl(DeviceMapper deviceMapper, UserMapper userMapper) {
+    public DeviceServiceImpl(
+            DeviceMapper deviceMapper,
+            UserMapper userMapper,
+            TeacherDeviceBindMapper teacherDeviceBindMapper
+    ) {
         this.deviceMapper = deviceMapper;
         this.userMapper = userMapper;
+        this.teacherDeviceBindMapper = teacherDeviceBindMapper;
     }
 
     @Override
@@ -101,6 +109,38 @@ public class DeviceServiceImpl implements DeviceService {
             throw new IllegalArgumentException("设备不存在");
         }
         deviceMapper.enableById(id);
+    }
+
+    @Override
+    @Transactional
+    public void unbindMerchant(Long id) {
+        DeviceEntity entity = deviceMapper.findById(id);
+        if (entity == null) {
+            throw new IllegalArgumentException("设备不存在");
+        }
+        if (entity.getMerchantId() == null || entity.getMerchantId() <= 0) {
+            throw new IllegalArgumentException("设备未绑定商家");
+        }
+        teacherDeviceBindMapper.deleteByDeviceId(id);
+        deviceMapper.clearMerchantById(id);
+    }
+
+    @Override
+    public void bindMerchant(Long id, Long merchantId) {
+        if (merchantId == null || merchantId <= 0) {
+            throw new IllegalArgumentException("商家不能为空");
+        }
+        DeviceEntity entity = deviceMapper.findById(id);
+        if (entity == null) {
+            throw new IllegalArgumentException("设备不存在");
+        }
+        if (entity.getMerchantId() != null && entity.getMerchantId() > 0) {
+            throw new IllegalArgumentException("设备已绑定商家，请先解绑");
+        }
+        if (userMapper.findMerchantById(merchantId) == null) {
+            throw new IllegalArgumentException("商家不存在");
+        }
+        deviceMapper.updateMerchantById(id, merchantId);
     }
 
     private AdminDeviceVO toAdminVO(AdminDeviceRow row) {

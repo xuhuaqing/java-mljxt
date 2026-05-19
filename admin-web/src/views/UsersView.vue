@@ -5,7 +5,7 @@
       <div class="card-header">
         <div>
           <div class="header-title">角色用户列表</div>
-          <div class="header-sub">支持按角色、姓名、手机号快速筛选</div>
+          <div class="header-sub">支持按角色、名称、手机号快速筛选</div>
         </div>
       </div>
     </template>
@@ -14,16 +14,16 @@
         <el-option :value="1" label="用户" />
         <el-option :value="2" label="老师" />
         <el-option :value="3" label="商家" />
-        <el-option :value="4" label="开发" />
+        <el-option :value="4" label="合伙人" />
       </el-select>
-      <el-input v-model="query.keyword" placeholder="姓名或手机号" class="kw-input" />
+      <el-input v-model="query.keyword" placeholder="名称或手机号" class="kw-input" />
       <el-button type="primary" @click="load(1)">查询</el-button>
       <el-button @click="reset">重置</el-button>
       <el-button type="success" @click="openCreate">新增用户</el-button>
     </div>
     <el-table :data="rows" border stripe>
       <el-table-column prop="id" label="ID" width="90" />
-      <el-table-column prop="name" label="姓名" />
+      <el-table-column prop="name" label="名称" />
       <el-table-column prop="phone" label="手机号" />
       <el-table-column prop="roleName" label="角色" width="100" />
       <el-table-column label="状态" width="90">
@@ -59,7 +59,7 @@
       <div class="modal-panel" :style="modalStyle">
         <div class="modal-title" @mousedown="startDrag">{{ editingId ? "编辑用户" : "新增用户" }}</div>
         <el-form :model="form" label-width="90px">
-          <el-form-item label="姓名">
+          <el-form-item label="名称">
             <el-input v-model="form.name" />
           </el-form-item>
           <el-form-item label="手机号">
@@ -73,7 +73,7 @@
               <el-checkbox :label="1">用户</el-checkbox>
               <el-checkbox :label="2">老师</el-checkbox>
               <el-checkbox :label="3">商家</el-checkbox>
-              <el-checkbox :label="4">开发</el-checkbox>
+              <el-checkbox :label="4">合伙人</el-checkbox>
             </el-checkbox-group>
           </el-form-item>
           <el-form-item v-if="form.role === 3" label="剩余次数">

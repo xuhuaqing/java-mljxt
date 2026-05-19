@@ -1,5 +1,6 @@
 package com.example.springbootdemo.device.dao;
 
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -23,6 +24,12 @@ public interface TeacherDeviceBindMapper {
             VALUES(#{teacherId}, #{deviceId})
             """)
     int insert(@Param("teacherId") Long teacherId, @Param("deviceId") Long deviceId);
+
+    @Delete("""
+            DELETE FROM teacher_device_bind
+            WHERE device_id = #{deviceId}
+            """)
+    int deleteByDeviceId(@Param("deviceId") Long deviceId);
 
     @Select("""
             <script>

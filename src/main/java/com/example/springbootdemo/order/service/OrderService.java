@@ -4,6 +4,7 @@ import com.example.springbootdemo.order.PlaceOrderRequest;
 import com.example.springbootdemo.order.OrderUsagePageVO;
 import com.example.springbootdemo.order.PlaceOrderVO;
 import com.example.springbootdemo.order.AdminDeviceUsageRecordVO;
+import com.example.springbootdemo.order.AdminOrderRecordVO;
 
 import java.util.List;
 
@@ -20,4 +21,8 @@ public interface OrderService {
     long countAdminDeviceUsageRecords(Long merchantId, Long deviceId);
 
     List<AdminDeviceUsageRecordVO> queryAdminDeviceUsageRecordsForExport(Long merchantId, Long deviceId);
+
+    List<AdminOrderRecordVO> queryAdminOrderRecords(Long merchantId, Long deviceId, String phone, int pageNo, int pageSize);
+
+    long countAdminOrderRecords(Long merchantId, Long deviceId, String phone);
 }

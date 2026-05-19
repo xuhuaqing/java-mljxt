@@ -1,11 +1,11 @@
 <template>
   <el-card class="bind-card" shadow="never">
     <template #header>
-      <div class="title">开发绑定商家</div>
+      <div class="title">合伙人绑定商家</div>
     </template>
 
     <div class="toolbar">
-      <el-select v-model="form.developerId" clearable filterable placeholder="选择开发账号" class="developer-select" @change="onDeveloperChange">
+      <el-select v-model="form.developerId" clearable filterable placeholder="选择合伙人账号" class="developer-select" @change="onDeveloperChange">
         <el-option v-for="d in developers" :key="d.id" :label="`${d.name}(${d.phone})`" :value="d.id" />
       </el-select>
       <el-select
@@ -25,7 +25,7 @@
 
     <el-alert
       v-if="!form.developerId"
-      title="请先选择开发账号，再查看绑定列表"
+      title="请先选择合伙人账号，再查看绑定列表"
       type="info"
       show-icon
       :closable="false"
@@ -71,7 +71,7 @@ async function loadDevelopers() {
     const data = await fetchUsers({ role: 4, pageNo: 1, pageSize: 100 });
     developers.value = (data.records || []).map((r) => ({ id: r.id, name: r.name, phone: r.phone }));
   } catch (e: any) {
-    ElMessage.error(e?.message || "加载开发账号失败");
+    ElMessage.error(e?.message || "加载合伙人账号失败");
   }
 }
 
@@ -97,7 +97,7 @@ function onDeveloperChange() {
 
 async function bindNow() {
   if (!form.developerId || !form.merchantId) {
-    ElMessage.warning("请先选择开发和商家");
+    ElMessage.warning("请先选择合伙人和商家");
     return;
   }
   try {
@@ -111,7 +111,7 @@ async function bindNow() {
 
 async function unbindNow(row: { merchantId: number }) {
   if (!form.developerId) {
-    ElMessage.warning("请先选择开发账号");
+    ElMessage.warning("请先选择合伙人账号");
     return;
   }
   try {

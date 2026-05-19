@@ -19,6 +19,14 @@ public interface DeveloperMerchantBindMapper {
             """)
     int countByDeveloperAndMerchant(@Param("developerId") Long developerId, @Param("merchantId") Long merchantId);
 
+    @Select("""
+            SELECT developer_id
+            FROM developer_merchant_bind
+            WHERE merchant_id = #{merchantId}
+            LIMIT 1
+            """)
+    Long findDeveloperIdByMerchantId(@Param("merchantId") Long merchantId);
+
     @Insert("""
             INSERT INTO developer_merchant_bind(developer_id, merchant_id)
             VALUES(#{developerId}, #{merchantId})

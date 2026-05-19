@@ -7,6 +7,8 @@ import UsersView from "../views/UsersView.vue";
 import DevicesView from "../views/DevicesView.vue";
 import DeviceUsageRecordsView from "../views/DeviceUsageRecordsView.vue";
 import DeveloperMerchantBindView from "../views/DeveloperMerchantBindView.vue";
+import WithdrawRecordsView from "../views/WithdrawRecordsView.vue";
+import OrderRecordsView from "../views/OrderRecordsView.vue";
 import { useAuthStore } from "../stores/auth";
 
 const routes = [
@@ -21,7 +23,9 @@ const routes = [
       { path: "users", component: UsersView },
       { path: "devices", component: DevicesView },
       { path: "device-usage-records", component: DeviceUsageRecordsView },
-      { path: "developer-merchant-bind", component: DeveloperMerchantBindView }
+      { path: "order-records", component: OrderRecordsView },
+      { path: "developer-merchant-bind", component: DeveloperMerchantBindView },
+      { path: "withdraw-records", component: WithdrawRecordsView }
     ]
   }
 ];

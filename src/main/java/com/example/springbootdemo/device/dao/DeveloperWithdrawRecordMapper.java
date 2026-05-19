@@ -57,4 +57,43 @@ public interface DeveloperWithdrawRecordMapper {
               AND created_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
             """)
     long countTodayByDeveloperId(@Param("developerId") Long developerId);
+
+    @Select("""
+            <script>
+            SELECT
+                r.id,
+                r.developer_id AS developerId,
+                ua.name AS developerName,
+                ua.phone AS developerPhone,
+                r.usage_count_snapshot AS usageCountSnapshot,
+                r.created_at AS createdAt
+            FROM developer_withdraw_record r
+            LEFT JOIN user_account ua ON ua.id = r.developer_id AND ua.role = 4
+            <where>
+              <if test="developerId != null">
+                r.developer_id = #{developerId}
+              </if>
+            </where>
+            ORDER BY r.created_at DESC, r.id DESC
+            LIMIT #{offset}, #{pageSize}
+            </script>
+            """)
+    List<AdminWithdrawRecordRow> listForAdmin(
+            @Param("developerId") Long developerId,
+            @Param("offset") int offset,
+            @Param("pageSize") int pageSize
+    );
+
+    @Select("""
+            <script>
+            SELECT COUNT(1)
+            FROM developer_withdraw_record r
+            <where>
+              <if test="developerId != null">
+                r.developer_id = #{developerId}
+              </if>
+            </where>
+            </script>
+            """)
+    long countForAdmin(@Param("developerId") Long developerId);
 }

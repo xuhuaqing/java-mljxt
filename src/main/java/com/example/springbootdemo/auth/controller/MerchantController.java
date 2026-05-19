@@ -22,8 +22,10 @@ public class MerchantController {
 
     @GetMapping("/options")
     public ApiResponse<List<MerchantOptionVO>> options(
-            @RequestParam(value = "keyword", required = false) String keyword
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "phone", required = false) String phone
     ) {
-        return ApiResponse.success(merchantService.getMerchantOptions(keyword));
+        return ApiResponse.success(merchantService.getMerchantOptions(keyword, userId, phone));
     }
 }

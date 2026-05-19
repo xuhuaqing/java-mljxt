@@ -33,6 +33,25 @@ public interface OrderMapper {
             """)
     OrderEntity findById(@Param("id") Long id);
 
+    @Select("""
+            SELECT
+                o.id AS usageId,
+                o.user_id AS userId,
+                uu.name AS userName,
+                uu.phone AS userPhone,
+                md.machine_no AS machineNo,
+                o.project_duration AS projectDuration,
+                o.created_at AS createdAt
+            FROM usage_record o
+            INNER JOIN merchant_device md ON md.id = o.device_id
+            LEFT JOIN user_account uu ON uu.id = o.user_id
+            WHERE o.device_id = #{deviceId}
+              AND DATE_ADD(o.created_at, INTERVAL COALESCE(o.project_duration, 40) MINUTE) > NOW()
+            ORDER BY o.created_at DESC, o.id DESC
+            LIMIT 1
+            """)
+    ActiveDeviceUsageRow findActiveUsageByDeviceId(@Param("deviceId") Long deviceId);
+
     @Insert("""
             INSERT INTO order_record(
                 user_id,
@@ -76,6 +95,7 @@ public interface OrderMapper {
             SELECT
                 o.id,
                 o.user_id AS userId,
+                uu.name AS userName,
                 uu.phone AS userPhone,
                 o.merchant_id AS merchantId,
                 o.device_id AS deviceId,
@@ -189,6 +209,7 @@ public interface OrderMapper {
             SELECT
                 o.id,
                 o.user_id AS userId,
+                uu.name AS userName,
                 uu.phone AS userPhone,
                 o.merchant_id AS merchantId,
                 o.device_id AS deviceId,
@@ -283,6 +304,7 @@ public interface OrderMapper {
               o.device_id AS deviceId,
               md.device_name AS deviceName,
               o.user_id AS userId,
+              uu.name AS userName,
               uu.phone AS userPhone,
               o.project_name AS projectName,
               o.usage_count AS usageCount,
@@ -333,6 +355,7 @@ public interface OrderMapper {
               o.device_id AS deviceId,
               md.device_name AS deviceName,
               o.user_id AS userId,
+              uu.name AS userName,
               uu.phone AS userPhone,
               o.project_name AS projectName,
               o.usage_count AS usageCount,
@@ -355,5 +378,69 @@ public interface OrderMapper {
     List<com.example.springbootdemo.order.AdminDeviceUsageRecordVO> queryAdminDeviceUsageRecordsForExport(
             @Param("merchantId") Long merchantId,
             @Param("deviceId") Long deviceId
+    );
+
+    @Select("""
+            <script>
+            SELECT
+              o.id AS orderId,
+              o.user_id AS userId,
+              uu.name AS userName,
+              uu.phone AS userPhone,
+              o.merchant_id AS merchantId,
+              um.name AS merchantName,
+              o.device_id AS deviceId,
+              md.device_name AS deviceName,
+              o.project_name AS projectName,
+              o.project_duration AS projectDuration,
+              o.usage_count AS usageCount,
+              o.created_at AS createdAt
+            FROM order_record o
+            LEFT JOIN user_account uu ON uu.id = o.user_id
+            LEFT JOIN user_account um ON um.id = o.merchant_id
+            LEFT JOIN merchant_device md ON md.id = o.device_id
+            WHERE 1=1
+              <if test="merchantId != null">
+                AND o.merchant_id = #{merchantId}
+              </if>
+              <if test="deviceId != null">
+                AND o.device_id = #{deviceId}
+              </if>
+              <if test="phone != null and phone != ''">
+                AND uu.phone = #{phone}
+              </if>
+            ORDER BY o.created_at DESC, o.id DESC
+            LIMIT #{offset}, #{pageSize}
+            </script>
+            """)
+    List<com.example.springbootdemo.order.AdminOrderRecordVO> queryAdminOrderRecords(
+            @Param("merchantId") Long merchantId,
+            @Param("deviceId") Long deviceId,
+            @Param("phone") String phone,
+            @Param("offset") int offset,
+            @Param("pageSize") int pageSize
+    );
+
+    @Select("""
+            <script>
+            SELECT COUNT(1)
+            FROM order_record o
+            LEFT JOIN user_account uu ON uu.id = o.user_id
+            WHERE 1=1
+              <if test="merchantId != null">
+                AND o.merchant_id = #{merchantId}
+              </if>
+              <if test="deviceId != null">
+                AND o.device_id = #{deviceId}
+              </if>
+              <if test="phone != null and phone != ''">
+                AND uu.phone = #{phone}
+              </if>
+            </script>
+            """)
+    long countAdminOrderRecords(
+            @Param("merchantId") Long merchantId,
+            @Param("deviceId") Long deviceId,
+            @Param("phone") String phone
     );
 }

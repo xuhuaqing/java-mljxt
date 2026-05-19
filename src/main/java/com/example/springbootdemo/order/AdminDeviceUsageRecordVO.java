@@ -9,6 +9,7 @@ public record AdminDeviceUsageRecordVO(
         Long deviceId,
         String deviceName,
         Long userId,
+        String userName,
         String userPhone,
         String projectName,
         Integer usageCount,

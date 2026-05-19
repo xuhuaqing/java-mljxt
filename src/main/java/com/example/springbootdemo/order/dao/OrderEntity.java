@@ -5,7 +5,9 @@ import java.time.LocalDateTime;
 public class OrderEntity {
     private Long id;
     private Long userId;
+    private String userName;
     private String userPhone;
+    private String merchantName;
     private Long merchantId;
     private Long deviceId;
     private String deviceName;
@@ -35,6 +37,14 @@ public class OrderEntity {
         this.userId = userId;
     }
 
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
     public String getUserPhone() {
         return userPhone;
     }
@@ -49,6 +59,14 @@ public class OrderEntity {
 
     public void setMerchantId(Long merchantId) {
         this.merchantId = merchantId;
+    }
+
+    public String getMerchantName() {
+        return merchantName;
+    }
+
+    public void setMerchantName(String merchantName) {
+        this.merchantName = merchantName;
     }
 
     public Long getDeviceId() {
