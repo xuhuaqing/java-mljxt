@@ -75,7 +75,7 @@ export async function fetchDevices(params: { merchantId?: number; keyword?: stri
     pageNo: number;
     pageSize: number;
     records: Array<{
-      id: number; machineNo: string; deviceName: string; status: number; merchantId: number | null; merchantName: string | null; freeUseDeadline: string | null;
+      id: number; machineNo: string; deviceName: string; status: number; merchantId: number | null; merchantName: string | null; freeUseDeadline: string | null; inUse: boolean;
     }>;
   };
 }
@@ -85,9 +85,22 @@ export async function createDevice(payload: { machineNo: string; deviceName: str
   if (data.code !== "0") throw new Error(data.msg || "新增设备失败");
 }
 
+export async function updateDevice(
+  id: number,
+  payload: { machineNo: string; deviceName: string; merchantId?: number | null; freeUseDeadline?: string | null }
+) {
+  const { data } = await http.put(`/api/admin/devices/${id}`, payload);
+  if (data.code !== "0") throw new Error(data.msg || "编辑设备失败");
+}
+
 export async function updateDeviceDeadline(id: number, freeUseDeadline: string) {
   const { data } = await http.put(`/api/admin/devices/${id}/free-use-deadline`, { freeUseDeadline });
   if (data.code !== "0") throw new Error(data.msg || "设置截止时间失败");
+}
+
+export async function releaseDeviceUsage(id: number) {
+  const { data } = await http.put(`/api/device/${id}/manual-refresh`);
+  if (data.code !== "0") throw new Error(data.msg || "手动刷新失败");
 }
 
 export async function disableDevice(id: number) {

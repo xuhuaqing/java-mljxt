@@ -46,11 +46,20 @@ public interface OrderMapper {
             INNER JOIN merchant_device md ON md.id = o.device_id
             LEFT JOIN user_account uu ON uu.id = o.user_id
             WHERE o.device_id = #{deviceId}
+              AND o.released_at IS NULL
               AND DATE_ADD(o.created_at, INTERVAL COALESCE(o.project_duration, 40) MINUTE) > NOW()
             ORDER BY o.created_at DESC, o.id DESC
             LIMIT 1
             """)
     ActiveDeviceUsageRow findActiveUsageByDeviceId(@Param("deviceId") Long deviceId);
+
+    @Update("""
+            UPDATE usage_record
+            SET released_at = NOW()
+            WHERE id = #{usageId}
+              AND released_at IS NULL
+            """)
+    int releaseActiveUsage(@Param("usageId") Long usageId);
 
     @Insert("""
             INSERT INTO order_record(

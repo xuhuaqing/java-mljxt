@@ -1,6 +1,7 @@
 package com.example.springbootdemo.device.service;
 
 import com.example.springbootdemo.auth.dao.UserMapper;
+import com.example.springbootdemo.device.AdminDeviceUpdateRequest;
 import com.example.springbootdemo.device.AdminDeviceUpsertRequest;
 import com.example.springbootdemo.device.AdminDeviceVO;
 import com.example.springbootdemo.device.DeviceOptionVO;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class DeviceServiceImpl implements DeviceService {
@@ -20,15 +22,18 @@ public class DeviceServiceImpl implements DeviceService {
     private final DeviceMapper deviceMapper;
     private final UserMapper userMapper;
     private final TeacherDeviceBindMapper teacherDeviceBindMapper;
+    private final DeviceUsageGuardService deviceUsageGuardService;
 
     public DeviceServiceImpl(
             DeviceMapper deviceMapper,
             UserMapper userMapper,
-            TeacherDeviceBindMapper teacherDeviceBindMapper
+            TeacherDeviceBindMapper teacherDeviceBindMapper,
+            DeviceUsageGuardService deviceUsageGuardService
     ) {
         this.deviceMapper = deviceMapper;
         this.userMapper = userMapper;
         this.teacherDeviceBindMapper = teacherDeviceBindMapper;
+        this.deviceUsageGuardService = deviceUsageGuardService;
     }
 
     @Override
@@ -81,7 +86,44 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceEntity created = deviceMapper.findById(entity.getId());
         String merchantName = userMapper.findMerchantById(created.getMerchantId()).getName();
         return new AdminDeviceVO(created.getId(), created.getMachineNo(), created.getDeviceName(), created.getStatus(),
-                created.getMerchantId(), merchantName, created.getFreeUseDeadline());
+                created.getMerchantId(), merchantName, created.getFreeUseDeadline(), false);
+    }
+
+    @Override
+    @Transactional
+    public AdminDeviceVO updateDevice(Long id, AdminDeviceUpdateRequest request) {
+        DeviceEntity entity = deviceMapper.findById(id);
+        if (entity == null) {
+            throw new IllegalArgumentException("设备不存在");
+        }
+        DeviceEntity byMachineNo = deviceMapper.findByMachineNo(request.getMachineNo());
+        if (byMachineNo != null && !byMachineNo.getId().equals(id)) {
+            throw new IllegalArgumentException("设备编号已存在");
+        }
+        Long newMerchantId = normalizeMerchantId(request.getMerchantId());
+        if (newMerchantId != null && userMapper.findMerchantById(newMerchantId) == null) {
+            throw new IllegalArgumentException("商家不存在");
+        }
+        Long oldMerchantId = normalizeMerchantId(entity.getMerchantId());
+        if (!Objects.equals(oldMerchantId, newMerchantId) && oldMerchantId != null) {
+            teacherDeviceBindMapper.deleteByDeviceId(id);
+        }
+        deviceMapper.updateByAdmin(id, request.getMachineNo(), request.getDeviceName(), newMerchantId, request.getFreeUseDeadline());
+        DeviceEntity updated = deviceMapper.findById(id);
+        String merchantName = null;
+        if (updated.getMerchantId() != null && updated.getMerchantId() > 0) {
+            merchantName = userMapper.findMerchantById(updated.getMerchantId()).getName();
+        }
+        return new AdminDeviceVO(updated.getId(), updated.getMachineNo(), updated.getDeviceName(), updated.getStatus(),
+                updated.getMerchantId(), merchantName, updated.getFreeUseDeadline(),
+                deviceUsageGuardService.isDeviceInUse(updated.getId()));
+    }
+
+    private Long normalizeMerchantId(Long merchantId) {
+        if (merchantId == null || merchantId <= 0) {
+            return null;
+        }
+        return merchantId;
     }
 
     @Override
@@ -143,8 +185,14 @@ public class DeviceServiceImpl implements DeviceService {
         deviceMapper.updateMerchantById(id, merchantId);
     }
 
+    @Override
+    public void releaseDeviceUsage(Long id) {
+        deviceUsageGuardService.releaseDeviceUsage(id);
+    }
+
     private AdminDeviceVO toAdminVO(AdminDeviceRow row) {
         return new AdminDeviceVO(row.getId(), row.getMachineNo(), row.getDeviceName(), row.getStatus(),
-                row.getMerchantId(), row.getMerchantName(), row.getFreeUseDeadline());
+                row.getMerchantId(), row.getMerchantName(), row.getFreeUseDeadline(),
+                Boolean.TRUE.equals(row.getInUse()));
     }
 }

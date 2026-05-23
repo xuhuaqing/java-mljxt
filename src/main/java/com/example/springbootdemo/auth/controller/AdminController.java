@@ -5,6 +5,7 @@ import com.example.springbootdemo.auth.AdminUserVO;
 import com.example.springbootdemo.auth.AdminUserUpsertRequest;
 import com.example.springbootdemo.auth.service.AuthService;
 import com.example.springbootdemo.common.ApiResponse;
+import com.example.springbootdemo.device.AdminDeviceUpdateRequest;
 import com.example.springbootdemo.device.AdminDeviceUpsertRequest;
 import com.example.springbootdemo.device.AdminDeviceVO;
 import com.example.springbootdemo.device.BindDeviceMerchantRequest;
@@ -155,6 +156,19 @@ public class AdminController {
     public ApiResponse<AdminDeviceVO> createDevice(@Valid @RequestBody AdminDeviceUpsertRequest request) {
         requireAdmin(AuthContext.get());
         return ApiResponse.success(deviceService.createDevice(request));
+    }
+
+    @PutMapping("/devices/{id}")
+    public ApiResponse<AdminDeviceVO> updateDevice(@PathVariable Long id, @Valid @RequestBody AdminDeviceUpdateRequest request) {
+        requireAdmin(AuthContext.get());
+        return ApiResponse.success(deviceService.updateDevice(id, request));
+    }
+
+    @PutMapping("/devices/{id}/release-usage")
+    public ApiResponse<Void> releaseDeviceUsage(@PathVariable Long id) {
+        requireAdmin(AuthContext.get());
+        deviceService.releaseDeviceUsage(id);
+        return ApiResponse.success(null);
     }
 
     @PutMapping("/devices/{id}/free-use-deadline")

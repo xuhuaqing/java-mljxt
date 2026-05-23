@@ -73,7 +73,14 @@ public interface DeviceMapper {
               d.status,
               d.merchant_id AS merchantId,
               u.name AS merchantName,
-              d.free_use_deadline AS freeUseDeadline
+              d.free_use_deadline AS freeUseDeadline,
+              EXISTS (
+                SELECT 1
+                FROM usage_record ur
+                WHERE ur.device_id = d.id
+                  AND ur.released_at IS NULL
+                  AND DATE_ADD(ur.created_at, INTERVAL COALESCE(ur.project_duration, 40) MINUTE) > NOW()
+              ) AS inUse
             FROM merchant_device d
             LEFT JOIN user_account u ON u.id = d.merchant_id
             <where>
@@ -152,4 +159,18 @@ public interface DeviceMapper {
             WHERE id = #{id}
             """)
     int updateMerchantById(@Param("id") Long id, @Param("merchantId") Long merchantId);
+
+    @Update("""
+            UPDATE merchant_device
+            SET machine_no = #{machineNo},
+                device_name = #{deviceName},
+                merchant_id = #{merchantId},
+                free_use_deadline = #{freeUseDeadline}
+            WHERE id = #{id}
+            """)
+    int updateByAdmin(@Param("id") Long id,
+                      @Param("machineNo") String machineNo,
+                      @Param("deviceName") String deviceName,
+                      @Param("merchantId") Long merchantId,
+                      @Param("freeUseDeadline") java.time.LocalDateTime freeUseDeadline);
 }

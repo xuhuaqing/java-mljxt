@@ -1,5 +1,6 @@
 package com.example.springbootdemo.device.service;
 
+import com.example.springbootdemo.device.AdminDeviceUpdateRequest;
 import com.example.springbootdemo.device.AdminDeviceUpsertRequest;
 import com.example.springbootdemo.device.AdminDeviceVO;
 import com.example.springbootdemo.device.DeviceOptionVO;
@@ -17,6 +18,8 @@ public interface DeviceService {
 
     AdminDeviceVO createDevice(AdminDeviceUpsertRequest request);
 
+    AdminDeviceVO updateDevice(Long id, AdminDeviceUpdateRequest request);
+
     void updateFreeUseDeadline(Long id, LocalDateTime deadline);
 
     void disableDevice(Long id);
@@ -26,4 +29,6 @@ public interface DeviceService {
     void unbindMerchant(Long id);
 
     void bindMerchant(Long id, Long merchantId);
+
+    void releaseDeviceUsage(Long id);
 }

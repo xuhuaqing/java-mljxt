@@ -9,6 +9,7 @@ public record AdminDeviceVO(
         Integer status,
         Long merchantId,
         String merchantName,
-        LocalDateTime freeUseDeadline
+        LocalDateTime freeUseDeadline,
+        Boolean inUse
 ) {
 }

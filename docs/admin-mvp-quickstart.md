@@ -44,6 +44,11 @@ mvnw.cmd spring-boot:run
 
 `Authorization: Bearer <token>`
 
+设备相关：
+
+- 设备列表（管理端）：`GET /api/admin/devices`（含 `inUse`，需 Token）
+- 手动刷新、释放占用（**无需 Token**）：`PUT /api/device/{id}/manual-refresh`，见 `docs/device-manual-refresh-api.md`
+
 ## 6. 说明
 
 - 一期MVP为登录与角色权限，不含完整业务后台页面。

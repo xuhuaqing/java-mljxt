@@ -36,9 +36,23 @@
           <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? "启用" : "停用" }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="freeUseDeadline" label="免费使用截止时间" width="190" />
-      <el-table-column label="操作" width="340" fixed="right">
+      <el-table-column label="使用占用" width="100">
         <template #default="{ row }">
+          <el-tag :type="row.inUse ? 'warning' : 'info'">{{ row.inUse ? "使用中" : "空闲" }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="freeUseDeadline" label="免费使用截止时间" width="190" />
+      <el-table-column label="操作" width="480" fixed="right">
+        <template #default="{ row }">
+          <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+          <el-button
+            link
+            type="warning"
+            :disabled="!row.inUse"
+            @click="releaseUsage(row)"
+          >
+            手动刷新
+          </el-button>
           <el-button link type="primary" @click="openDeadline(row)">设置截止时间</el-button>
           <el-button link type="primary" :disabled="!!row.merchantId" @click="openBind(row)">绑定商家</el-button>
           <el-button
@@ -66,23 +80,25 @@
     </div>
   </el-card>
 
-  <div v-if="createVisible" class="modal-mask" @click.self="createVisible = false">
+  <div v-if="formVisible" class="modal-mask" @click.self="formVisible = false">
     <div class="modal-panel">
-      <div class="modal-title">新增设备</div>
-      <el-form :model="createForm" label-width="110px">
+      <div class="modal-title">{{ editingId ? "编辑设备" : "新增设备" }}</div>
+      <el-form :model="deviceForm" label-width="110px">
         <el-form-item label="设备编号">
-          <el-input v-model="createForm.machineNo" />
+          <el-input v-model="deviceForm.machineNo" />
         </el-form-item>
         <el-form-item label="设备名称">
-          <el-input v-model="createForm.deviceName" />
+          <el-input v-model="deviceForm.deviceName" />
         </el-form-item>
         <el-form-item label="商家">
           <el-select
-            v-model="createForm.merchantId"
+            v-model="deviceForm.merchantId"
+            clearable
             filterable
             remote
             :remote-method="searchMerchants"
             :teleported="false"
+            placeholder="可选，未绑定可留空"
             style="width: 100%"
           >
             <el-option v-for="m in merchants" :key="m.id" :label="m.name" :value="m.id" />
@@ -90,7 +106,7 @@
         </el-form-item>
         <el-form-item label="免费截止时间">
           <el-date-picker
-            v-model="createForm.freeUseDeadline"
+            v-model="deviceForm.freeUseDeadline"
             type="datetime"
             value-format="YYYY-MM-DDTHH:mm:ss"
             :teleported="false"
@@ -99,8 +115,8 @@
         </el-form-item>
       </el-form>
       <div class="modal-actions">
-        <el-button @click="createVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitCreate">创建</el-button>
+        <el-button @click="formVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitForm">{{ editingId ? "保存" : "创建" }}</el-button>
       </div>
     </div>
   </div>
@@ -152,15 +168,16 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { bindDeviceMerchant, createDevice, disableDevice, enableDevice, fetchDevices, fetchMerchantOptions, unbindDeviceMerchant, updateDeviceDeadline } from "../api/auth";
+import { bindDeviceMerchant, createDevice, disableDevice, enableDevice, fetchDevices, fetchMerchantOptions, releaseDeviceUsage, unbindDeviceMerchant, updateDevice, updateDeviceDeadline } from "../api/auth";
 
 const rows = ref<Array<any>>([]);
 const total = ref(0);
 const merchants = ref<Array<{ id: number; name: string }>>([]);
 const query = reactive({ merchantId: undefined as number | undefined, keyword: "", pageNo: 1, pageSize: 20 });
 
-const createVisible = ref(false);
-const createForm = reactive({ machineNo: "", deviceName: "", merchantId: undefined as number | undefined, freeUseDeadline: "" as string | null });
+const formVisible = ref(false);
+const editingId = ref<number | null>(null);
+const deviceForm = reactive({ machineNo: "", deviceName: "", merchantId: undefined as number | undefined, freeUseDeadline: "" as string | null });
 
 const bindVisible = ref(false);
 const bindForm = reactive({ id: 0, merchantId: undefined as number | undefined });
@@ -186,25 +203,57 @@ function reset() {
 }
 
 function openCreate() {
-  createForm.machineNo = "";
-  createForm.deviceName = "";
-  createForm.merchantId = undefined;
-  createForm.freeUseDeadline = null;
-  createVisible.value = true;
+  editingId.value = null;
+  deviceForm.machineNo = "";
+  deviceForm.deviceName = "";
+  deviceForm.merchantId = undefined;
+  deviceForm.freeUseDeadline = null;
+  formVisible.value = true;
 }
 
-async function submitCreate() {
-  if (!createForm.machineNo || !createForm.deviceName || !createForm.merchantId) {
-    ElMessage.warning("请填写完整信息");
+function openEdit(row: any) {
+  editingId.value = row.id;
+  deviceForm.machineNo = row.machineNo || "";
+  deviceForm.deviceName = row.deviceName || "";
+  deviceForm.merchantId = row.merchantId || undefined;
+  deviceForm.freeUseDeadline = row.freeUseDeadline || null;
+  if (row.merchantId && row.merchantName) {
+    const exists = merchants.value.some((m) => m.id === row.merchantId);
+    if (!exists) {
+      merchants.value = [{ id: row.merchantId, name: row.merchantName }, ...merchants.value];
+    }
+  }
+  formVisible.value = true;
+}
+
+async function submitForm() {
+  if (!deviceForm.machineNo || !deviceForm.deviceName) {
+    ElMessage.warning("请填写设备编号和设备名称");
+    return;
+  }
+  if (!editingId.value && !deviceForm.merchantId) {
+    ElMessage.warning("新增设备请选择商家");
     return;
   }
   try {
-    await createDevice(createForm as any);
-    ElMessage.success("新增成功");
-    createVisible.value = false;
-    load(1);
+    if (editingId.value) {
+      await updateDevice(editingId.value, {
+        machineNo: deviceForm.machineNo,
+        deviceName: deviceForm.deviceName,
+        merchantId: deviceForm.merchantId ?? null,
+        freeUseDeadline: deviceForm.freeUseDeadline,
+      });
+      ElMessage.success("保存成功");
+      formVisible.value = false;
+      load(query.pageNo);
+    } else {
+      await createDevice(deviceForm as any);
+      ElMessage.success("新增成功");
+      formVisible.value = false;
+      load(1);
+    }
   } catch (e: any) {
-    ElMessage.error(e?.message || "新增失败");
+    ElMessage.error(e?.message || (editingId.value ? "保存失败" : "新增失败"));
   }
 }
 
@@ -279,6 +328,29 @@ async function submitBind() {
     load(query.pageNo);
   } catch (e: any) {
     ElMessage.error(e?.message || "绑定失败");
+  }
+}
+
+async function releaseUsage(row: any) {
+  if (!row.inUse) {
+    ElMessage.info("设备当前空闲，无需刷新");
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `设备「${row.deviceName || row.machineNo}」当前处于使用中。若设备异常导致用户无法再次下单，可手动刷新释放占用，释放后用户可重新下单。是否继续？`,
+      "手动刷新",
+      { type: "warning", confirmButtonText: "刷新", cancelButtonText: "取消" }
+    );
+  } catch {
+    return;
+  }
+  try {
+    await releaseDeviceUsage(row.id);
+    ElMessage.success("已释放占用，用户可重新下单");
+    load(query.pageNo);
+  } catch (e: any) {
+    ElMessage.error(e?.message || "手动刷新失败");
   }
 }
 

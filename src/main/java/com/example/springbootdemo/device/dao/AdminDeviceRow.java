@@ -10,6 +10,7 @@ public class AdminDeviceRow {
     private Long merchantId;
     private String merchantName;
     private LocalDateTime freeUseDeadline;
+    private Boolean inUse;
 
     public Long getId() {
         return id;
@@ -65,5 +66,13 @@ public class AdminDeviceRow {
 
     public void setFreeUseDeadline(LocalDateTime freeUseDeadline) {
         this.freeUseDeadline = freeUseDeadline;
+    }
+
+    public Boolean getInUse() {
+        return inUse;
+    }
+
+    public void setInUse(Boolean inUse) {
+        this.inUse = inUse;
     }
 }
